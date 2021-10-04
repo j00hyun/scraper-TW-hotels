@@ -34,11 +34,41 @@ def ask_save_option():
 
 async def parse_to_excel(city_name: str):
     filename = city_name + "所有旅宿統計資料.xlsx"
+
+    """
+    apps -> services -> storer.py -> excelservice
+        domain -> models -> store -> excel.py -> Storer
+    """
     stroing_excel_service = HotelStoringExcelService(filename, scraping_logger)
+
+    """
+    apps -> services -> scraper.py -> scrapingservice -> find_counties
+        domain -> models -> region -> selector.py -> selector -> extract
+            domain -> models -> region -> country.py -> countyVO
+    """
     counties = await hotels_scraping_service.find_counties(city_name)
     for county in counties:
+
+        """
+        apps -> services -> scraper.py -> scrapingservice -> find_hotel
+            domain -> models -> hotel -> parsers.py -> pages -> extract
+                domain -> models -> hotel -> pages.py -> HotelVO
+            domain -> models -> hotel -> parsers.py -> hotels -> extract_all
+                domain -> models -> hotel -> content.py -> HotelContentVO
+        """
         hotels = await hotels_scraping_service.find_hotels_by_county(city_name, county)
+
+        """
+        apps -> assembler -> hotel.py -> Assembler -> assemble
+            apps -> dto -> hotel.py -> HotelContentRow
+        """
         hotel_rows: List[HotelContentRow] = HotelContentRowsAssembler().assemble(hotels)
+
+        """
+        apps -> services -> storer.py -> excelservice -> store
+            domain -> models -> store -> excel.py -> Storer -> add_sheet
+                                                            -> store_hotels
+        """
         await stroing_excel_service.store(county.name,
                                           Config.PARSED_COLUMNS,
                                           hotel_rows,
@@ -63,6 +93,9 @@ async def parsing(city_name: str, save_option: str):
         await parse_to_json(city_name)
 
 
+"""
+main -> apps -> domain -> apps -> main
+"""
 def main():
     city_code = ask_city()
     save_option = ask_save_option()
